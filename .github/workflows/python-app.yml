@@ -1,0 +1,31 @@
+name: CI - Robot Framework & Appium
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout do código
+        uses: actions/checkout@v3
+
+      - name: Configurar Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.8'
+
+      - name: Instalar Poetry
+        run: |
+          curl -sSL https://install.python-poetry.org | python -
+          echo "::add-path::$HOME/.local/bin"
+
+      - name: Instalar dependências
+        run: poetry install
+
+      - name: Executar Testes
+        run: poetry run robot features/ --outputdir results
