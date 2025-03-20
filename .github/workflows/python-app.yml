@@ -3,14 +3,14 @@ name: Mobile Tests Pipeline
 on:
   push:
     branches:
-      - main  # Executa quando há push na branch main
+      - main
   pull_request:
     branches:
-      - main  # Executa quando há um pull request para a branch main
+      - main
 
 jobs:
   test:
-    runs-on: ubuntu-latest  # Usa um runner com Ubuntu
+    runs-on: ubuntu-latest
 
     steps:
       # Passo 1: Checkout do código
@@ -21,7 +21,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
-          python-version: '3.9'  # Versão do Python que você usa
+          python-version: '3.9'
 
       # Passo 3: Instalar dependências do requirements.txt
       - name: Install dependencies
@@ -34,23 +34,32 @@ jobs:
         run: |
           npm install -g appium
 
-      # Passo 5: Iniciar o servidor Appium em segundo plano
+      # Passo 5: Configurar e iniciar o emulador Android
+      - name: Set up Android emulator
+        run: |
+          sudo apt-get install -y --no-install-recommends libgl1-mesa-glx libgl1-mesa-dri
+          echo "y" | sdkmanager "system-images;android-30;google_apis;x86"
+          echo "no" | avdmanager create avd -n test -k "system-images;android-30;google_apis;x86"
+          emulator -avd test -no-audio -no-window &
+          adb wait-for-device
+
+      # Passo 6: Iniciar o servidor Appium em segundo plano
       - name: Start Appium server
         run: |
           appium --log-level error --allow-insecure chromedriver_autodownload &
           sleep 10  # Espera o servidor iniciar
 
-      # Passo 6: Verificar status do Appium
+      # Passo 7: Verificar status do Appium
       - name: Check Appium server status
         run: |
           curl http://localhost:4723/wd/hub/status
 
-      # Passo 7: Executar os testes
+      # Passo 8: Executar os testes
       - name: Run tests
         run: |
           robot --outputdir results --log log.html --report report.html features/
 
-      # Passo 8: Publicar os resultados dos testes
+      # Passo 9: Publicar os resultados dos testes
       - name: Upload test results
         uses: actions/upload-artifact@v4
         with:
