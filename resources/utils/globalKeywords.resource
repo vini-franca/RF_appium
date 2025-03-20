@@ -12,6 +12,11 @@ Clicar no botão
     Wait Until Element Is Visible    ${BOTAO}
     Click Element                    ${BOTAO}
 
+Clicar no texto
+    [Arguments]                 ${TEXTO}
+    Wait Until Page Contains    ${TEXTO}
+    Click Text                  ${TEXTO}
+
 Verificar se o texto está visível
     [Arguments]                      ${TEXTO}
     Wait Until Page Contains         ${TEXTO}

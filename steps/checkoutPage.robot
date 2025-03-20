@@ -36,5 +36,7 @@ Então devo finalizar a compra com sucesso
     Verificar se o texto está visível               ${checkout.mensagem.compraRealizadaSucesso}
 
 Então devo remover este item do carrinho
-    Clicar no botão      ${BOTAO_CART}
-    Clicar no botão      ${BOTAO_REMOVE}
+    Clicar no botão                              ${BOTAO_CART}
+    Clicar no texto                              ${checkout.botaoRemove}        
+    Wait Until Page Does Not Contain Element     ${BOTAO_MOCHILA}
+    Wait Until Page Does Not Contain Element     ${BOTAO_REMOVE}
