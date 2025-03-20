@@ -37,7 +37,8 @@ jobs:
       # Passo 5: Configurar e iniciar o emulador Android
       - name: Set up Android emulator
         run: |
-          sudo apt-get install -y --no-install-recommends libgl1-mesa-glx libgl1-mesa-dri
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends libgl1 libgl1-mesa-dri
           echo "y" | sdkmanager "system-images;android-30;google_apis;x86"
           echo "no" | avdmanager create avd -n test -k "system-images;android-30;google_apis;x86"
           emulator -avd test -no-audio -no-window &
