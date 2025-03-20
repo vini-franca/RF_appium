@@ -50,13 +50,13 @@ jobs:
           echo "ANDROID_HOME=$ANDROID_HOME" >> $GITHUB_ENV
           echo "PATH=$ANDROID_HOME/cmdline-tools/tools/bin:$ANDROID_HOME/emulator:$ANDROID_HOME/platform-tools:$PATH" >> $GITHUB_ENV
 
-      # Passo 7: Configurar e iniciar o emulador Android
+      # Passo 7: Configurar e iniciar o emulador Android (sem aceleração de hardware)
       - name: Set up Android emulator
         run: |
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends libgl1 libgl1-mesa-dri
           echo "no" | $ANDROID_HOME/cmdline-tools/tools/bin/avdmanager create avd -n test -k "system-images;android-30;google_apis;x86"
-          $ANDROID_HOME/emulator/emulator -avd test -no-audio -no-window -no-snapshot -no-boot-anim &
+          $ANDROID_HOME/emulator/emulator -avd test -no-audio -no-window -no-snapshot -no-boot-anim -gpu swiftshader_indirect &
           timeout 300 bash -c 'while ! $ANDROID_HOME/platform-tools/adb shell getprop sys.boot_completed 2>/dev/null | grep -q "1"; do sleep 5; done; echo "Emulator is ready"'
 
       # Passo 8: Iniciar o servidor Appium em segundo plano
