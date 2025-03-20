@@ -1,0 +1,14 @@
+login:
+  usuarioPadrao: standard_user
+  usuarioProblema: problem_user
+  usuarioBloqueado: locked_out_user
+  usuarioPerformance: performance_glitch_user
+  usuarioNaoCadastrado: user_erro
+  senha: secret_sauce
+  mensagem:
+    usuarioBloqueado: Sorry, this user has been locked out.
+    usuarioNaoCadastrado: Username and password do not match any user in this service.
+  
+checkout:
+  mensagem:
+    compraRealizadaSucesso: Your order has been dispatched, and will arrive just as fast as the pony can get there!
