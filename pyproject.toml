@@ -2,7 +2,7 @@
 name = "rf-appium"
 version = "0.1.0"
 description = "Automação Mobile Com Appium e Robot Framework"
-authors = ["Vinicius Trindade <vinicius.trindade@gmail.com>"]
+authors = ["Vinicius Santana <vinicius.srfranca@gmail.com>"]
 readme = "README.md"
 
 [tool.poetry.dependencies]

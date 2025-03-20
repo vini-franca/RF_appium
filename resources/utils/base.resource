@@ -1,6 +1,6 @@
 *** Settings ***
 ## Carrega as variáveis do arquivo `.env`
-Library    resources/lib/DotEnv.py
+Library    ../../resources/lib/DotEnv.py
 
 ## Bibliotecas
 Library    AppiumLibrary  timeout=30
