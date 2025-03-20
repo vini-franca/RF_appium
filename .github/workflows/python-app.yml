@@ -48,7 +48,7 @@ jobs:
       - name: Set up Android environment
         run: |
           echo "ANDROID_HOME=$ANDROID_HOME" >> $GITHUB_ENV
-          echo "$ANDROID_HOME/cmdline-tools/tools/bin:$ANDROID_HOME/emulator:$ANDROID_HOME/platform-tools:$PATH" >> $GITHUB_ENV
+          echo "PATH=$ANDROID_HOME/cmdline-tools/tools/bin:$ANDROID_HOME/emulator:$ANDROID_HOME/platform-tools:$PATH" >> $GITHUB_ENV
 
       # Passo 7: Configurar e iniciar o emulador Android
       - name: Set up Android emulator
