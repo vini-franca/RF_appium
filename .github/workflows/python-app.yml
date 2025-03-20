@@ -34,33 +34,48 @@ jobs:
         run: |
           npm install -g appium
 
-      # Passo 5: Configurar e iniciar o emulador Android
+      # Passo 5: Instalar o Android SDK
+      - name: Install Android SDK
+        run: |
+          mkdir -p $ANDROID_HOME
+          curl -o sdk-tools.zip https://dl.google.com/android/repository/commandlinetools-linux-6609375_latest.zip
+          unzip sdk-tools.zip -d $ANDROID_HOME/cmdline-tools
+          rm sdk-tools.zip
+          yes | $ANDROID_HOME/cmdline-tools/tools/bin/sdkmanager --licenses
+          $ANDROID_HOME/cmdline-tools/tools/bin/sdkmanager "platform-tools" "emulator" "system-images;android-30;google_apis;x86"
+
+      # Passo 6: Configurar variáveis de ambiente do Android
+      - name: Set up Android environment
+        run: |
+          echo "ANDROID_HOME=$ANDROID_HOME" >> $GITHUB_ENV
+          echo "$ANDROID_HOME/cmdline-tools/tools/bin:$ANDROID_HOME/emulator:$ANDROID_HOME/platform-tools:$PATH" >> $GITHUB_ENV
+
+      # Passo 7: Configurar e iniciar o emulador Android
       - name: Set up Android emulator
         run: |
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends libgl1 libgl1-mesa-dri
-          echo "y" | sdkmanager "system-images;android-30;google_apis;x86"
-          echo "no" | avdmanager create avd -n test -k "system-images;android-30;google_apis;x86"
-          emulator -avd test -no-audio -no-window &
-          adb wait-for-device
+          echo "no" | $ANDROID_HOME/cmdline-tools/tools/bin/avdmanager create avd -n test -k "system-images;android-30;google_apis;x86"
+          $ANDROID_HOME/emulator/emulator -avd test -no-audio -no-window &
+          $ANDROID_HOME/platform-tools/adb wait-for-device
 
-      # Passo 6: Iniciar o servidor Appium em segundo plano
+      # Passo 8: Iniciar o servidor Appium em segundo plano
       - name: Start Appium server
         run: |
           appium --log-level error --allow-insecure chromedriver_autodownload &
           sleep 10  # Espera o servidor iniciar
 
-      # Passo 7: Verificar status do Appium
+      # Passo 9: Verificar status do Appium
       - name: Check Appium server status
         run: |
           curl http://localhost:4723/wd/hub/status
 
-      # Passo 8: Executar os testes
+      # Passo 10: Executar os testes
       - name: Run tests
         run: |
           robot --outputdir results --log log.html --report report.html features/
 
-      # Passo 9: Publicar os resultados dos testes
+      # Passo 11: Publicar os resultados dos testes
       - name: Upload test results
         uses: actions/upload-artifact@v4
         with:
