@@ -1,31 +1,53 @@
-name: CI - Robot Framework & Appium
+name: Mobile Tests Pipeline
 
 on:
   push:
-    branches: [ main ]
+    branches:
+      - main  # Executa quando há push na branch main
   pull_request:
-    branches: [ main ]
+    branches:
+      - main  # Executa quando há um pull request para a branch main
 
 jobs:
   test:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-latest  # Usa um runner com Ubuntu
 
     steps:
-      - name: Checkout do código
+      # Passo 1: Checkout do código
+      - name: Checkout code
         uses: actions/checkout@v3
 
-      - name: Configurar Python
+      # Passo 2: Configurar o ambiente Python
+      - name: Set up Python
         uses: actions/setup-python@v4
         with:
-          python-version: '3.8'
+          python-version: '3.9'  # Versão do Python que você usa
 
-      - name: Instalar Poetry
+      # Passo 3: Instalar dependências
+      - name: Install dependencies
         run: |
-          curl -sSL https://install.python-poetry.org | python -
-          echo "::add-path::$HOME/.local/bin"
+          pip install poetry
+          poetry install
 
-      - name: Instalar dependências
-        run: poetry install
+      # Passo 4: Instalar o Appium
+      - name: Install Appium
+        run: |
+          npm install -g appium
 
-      - name: Executar Testes
-        run: poetry run robot features/ --outputdir results
+      # Passo 5: Iniciar o servidor Appium em segundo plano
+      - name: Start Appium server
+        run: |
+          appium --log-level error --allow-insecure chromedriver_autodownload &
+          sleep 10  # Espera o servidor iniciar
+
+      # Passo 6: Executar os testes
+      - name: Run tests
+        run: |
+          robot --outputdir results --log log.html --report report.html features/
+
+      # Passo 7: Publicar os resultados dos testes
+      - name: Upload test results
+        uses: actions/upload-artifact@v3
+        with:
+          name: test-results
+          path: results/
