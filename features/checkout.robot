@@ -15,5 +15,3 @@ CT-02 - Validar remover item do carrinho
     Dado que estou logado com sucesso    ${login.usuarioPadrao}    ${login.senha}
     Quando adiciono um item ao carrinho
     Então devo remover este item do carrinho
-
-
