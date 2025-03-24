@@ -1,4 +1,4 @@
-name: Mobile Tests Pipeline
+name: Mobile Tests Pipeline (Docker)
 
 on:
   push:
@@ -17,65 +17,22 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v3
 
-      # Passo 2: Configurar o ambiente Python
-      - name: Set up Python
-        uses: actions/setup-python@v4
-        with:
-          python-version: '3.9'
-
-      # Passo 3: Instalar dependências do requirements.txt
-      - name: Install dependencies
+      # Passo 2: Configurar Docker e executar os testes
+      - name: Run tests in Docker
         run: |
-          python -m pip install --upgrade pip
-          pip install -r requirements.txt
-
-      # Passo 4: Instalar o Appium
-      - name: Install Appium
-        run: |
-          npm install -g appium
-
-      # Passo 5: Instalar o Android SDK
-      - name: Install Android SDK
-        run: |
-          mkdir -p $ANDROID_HOME
-          curl -o sdk-tools.zip https://dl.google.com/android/repository/commandlinetools-linux-6609375_latest.zip
-          unzip sdk-tools.zip -d $ANDROID_HOME/cmdline-tools
-          rm sdk-tools.zip
-          yes | $ANDROID_HOME/cmdline-tools/tools/bin/sdkmanager --licenses
-          $ANDROID_HOME/cmdline-tools/tools/bin/sdkmanager "platform-tools" "emulator" "system-images;android-30;google_apis;x86"
-
-      # Passo 6: Configurar variáveis de ambiente do Android
-      - name: Set up Android environment
-        run: |
-          echo "ANDROID_HOME=$ANDROID_HOME" >> $GITHUB_ENV
-          echo "PATH=$ANDROID_HOME/cmdline-tools/tools/bin:$ANDROID_HOME/emulator:$ANDROID_HOME/platform-tools:$PATH" >> $GITHUB_ENV
-
-      # Passo 7: Configurar e iniciar o emulador Android (sem aceleração de hardware)
-      - name: Set up Android emulator
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y --no-install-recommends libgl1 libgl1-mesa-dri
-          echo "no" | $ANDROID_HOME/cmdline-tools/tools/bin/avdmanager create avd -n test -k "system-images;android-30;google_apis;x86"
-          $ANDROID_HOME/emulator/emulator -avd test -no-audio -no-window -no-snapshot -no-boot-anim -gpu swiftshader_indirect -no-accel &
-          timeout 600 bash -c 'while ! $ANDROID_HOME/platform-tools/adb shell getprop sys.boot_completed 2>/dev/null | grep -q "1"; do sleep 10; echo "Waiting for emulator..."; done; echo "Emulator is ready"'
-
-      # Passo 8: Iniciar o servidor Appium em segundo plano
-      - name: Start Appium server
-        run: |
-          appium --log-level error --allow-insecure chromedriver_autodownload &
-          sleep 10  # Espera o servidor iniciar
-
-      # Passo 9: Verificar status do Appium
-      - name: Check Appium server status
-        run: |
-          curl http://localhost:4723/wd/hub/status
-
-      # Passo 10: Executar os testes
-      - name: Run tests
-        run: |
+          docker run --rm \
+          -v $PWD:/root/tests \
+          -w /root/tests \
+          butomo1989/docker-android-x86-11.0 \
+          bash -c "
+          apt-get update && \
+          pip install -r requirements.txt && \
+          appium --allow-insecure chromedriver_autodownload & \
+          sleep 10 && \
           robot --outputdir results --log log.html --report report.html features/
-
-      # Passo 11: Publicar os resultados dos testes
+          "
+      
+      # Passo 3: Publicar os resultados dos testes
       - name: Upload test results
         uses: actions/upload-artifact@v4
         with:
