@@ -1,4 +1,4 @@
-name: Mobile Automation Pipeline (Fixed Docker Solution)
+name: Mobile Automation Pipeline (Native Solution)
 
 on:
   push:
@@ -10,13 +10,6 @@ jobs:
   test:
     runs-on: ubuntu-latest
     timeout-minutes: 30
-
-    services:
-      appium:
-        image: appium/appium
-        ports:
-          - 4723:4723
-        options: --privileged
 
     steps:
       - name: Checkout code
@@ -31,35 +24,51 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
+          npm install -g appium@2.0.0
 
-      - name: Run Android Emulator in Docker
+      - name: Setup Java
+        uses: actions/setup-java@v3
+        with:
+          distribution: 'zulu'
+          java-version: '11'
+
+      - name: Install Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Configure Android SDK
         run: |
-          # Usando a imagem oficial do Android Emulator
-          docker run -d \
-            --name android-emulator \
-            --privileged \
-            -p 5554:5554 \
-            -p 5555:5555 \
-            -e ANDROID_DEVICE="Nexus 5" \
-            -e ANDROID_VERSION=30 \
-            -e EMULATOR_ARGS="-no-window -gpu swiftshader_indirect -no-snapshot -noaudio -no-boot-anim" \
-            -v $(pwd):/root/tests \
-            -w /root/tests \
-            ghcr.io/butomo1989/docker-android-emulator:latest
+          echo "ANDROID_HOME=$ANDROID_SDK_ROOT" >> $GITHUB_ENV
+          echo "$ANDROID_SDK_ROOT/cmdline-tools/latest/bin:$ANDROID_SDK_ROOT/platform-tools:$ANDROID_SDK_ROOT/emulator:$PATH" >> $GITHUB_PATH
+          yes | sdkmanager --licenses
+          sdkmanager "platform-tools" "emulator" "platforms;android-30" "system-images;android-30;google_apis;x86"
 
-          # Wait for emulator to be ready
-          for i in {1..60}; do
-            if docker exec android-emulator adb shell getprop sys.boot_completed | grep -q "1"; then
-              echo "Emulator ready!"
+      - name: Create AVD
+        run: |
+          echo "no" | avdmanager create avd -n test -k "system-images;android-30;google_apis;x86" -f
+
+      - name: Start Emulator
+        run: |
+          emulator -avd test -no-audio -no-window -no-snapshot -gpu swiftshader_indirect -no-accel -memory 2048 &
+          adb wait-for-device
+          adb shell settings put global window_animation_scale 0
+          adb shell settings put global transition_animation_scale 0
+          adb shell settings put global animator_duration_scale 0
+          
+          # Robust wait for emulator
+          for i in {1..30}; do
+            if adb shell getprop sys.boot_completed | grep -q "1"; then
+              echo "Emulator ready after $i attempts"
               break
             fi
-            echo "Waiting for emulator... Attempt $i/60"
+            echo "Waiting for emulator... Attempt $i/30"
             sleep 5
           done
 
-          # Verificação final
-          docker exec android-emulator adb devices
-          docker exec android-emulator adb shell getprop
+      - name: Start Appium
+        run: |
+          appium --relaxed-security --log-timestamp --local-timezone --allow-insecure chromedriver_autodownload &
+          sleep 15
+          curl http://localhost:4723/wd/hub/status || true
 
       - name: Run Tests
         run: |
@@ -78,5 +87,6 @@ jobs:
       - name: Clean up
         if: always()
         run: |
-          docker stop android-emulator || true
-          docker rm android-emulator || true
+          adb kill-server || true
+          pkill -9 qemu-system-x86_64 || true
+          pkill -9 node || true
