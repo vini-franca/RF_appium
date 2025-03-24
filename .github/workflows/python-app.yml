@@ -1,4 +1,4 @@
-name: Mobile Tests Pipeline (Final)
+name: Mobile Tests Pipeline (Fixed)
 
 on:
   push:
@@ -27,10 +27,6 @@ jobs:
           npm install -g appium@2.0.0
           npm install -g appium-doctor
 
-      - name: Verify Appium installation
-        run: |
-          appium-doctor --android
-
       - name: Setup Java
         uses: actions/setup-java@v3
         with:
@@ -45,27 +41,33 @@ jobs:
           mv $ANDROID_HOME/cmdline-tools/cmdline-tools $ANDROID_HOME/cmdline-tools/tools
           rm sdk-tools.zip
           echo "ANDROID_HOME=$ANDROID_HOME" >> $GITHUB_ENV
-          echo "$ANDROID_HOME/cmdline-tools/tools/bin:$ANDROID_HOME/platform-tools:$PATH" >> $GITHUB_ENV
-          yes | $ANDROID_HOME/cmdline-tools/tools/bin/sdkmanager --licenses
-          $ANDROID_HOME/cmdline-tools/tools/bin/sdkmanager "platform-tools" "emulator" "platforms;android-30" "system-images;android-30;google_apis;x86"
+          echo "$ANDROID_HOME/cmdline-tools/tools/bin:$ANDROID_HOME/platform-tools" >> $GITHUB_PATH
+
+      - name: Verify Android tools
+        run: |
+          sdkmanager --version
+          adb version
+
+      - name: Accept licenses
+        run: |
+          yes | sdkmanager --licenses
+
+      - name: Install Android packages
+        run: |
+          sdkmanager "platform-tools" "emulator" "platforms;android-30" "system-images;android-30;google_apis;x86"
 
       - name: Create AVD
         run: |
-          echo "no" | $ANDROID_HOME/cmdline-tools/tools/bin/avdmanager create avd -n test -k "system-images;android-30;google_apis;x86" -f
+          echo "no" | avdmanager create avd -n test -k "system-images;android-30;google_apis;x86" -f
 
       - name: Start Emulator
         run: |
-          $ANDROID_HOME/emulator/emulator -avd test -no-audio -no-window -no-snapshot -gpu swiftshader_indirect -no-accel &
-          $ANDROID_HOME/platform-tools/adb wait-for-device
-          $ANDROID_HOME/platform-tools/adb shell settings put global window_animation_scale 0
-          $ANDROID_HOME/platform-tools/adb shell settings put global transition_animation_scale 0
-          $ANDROID_HOME/platform-tools/adb shell settings put global animator_duration_scale 0
-          timeout 300 bash -c 'while [[ "$($ANDROID_HOME/platform-tools/adb shell getprop sys.boot_completed | tr -d '\''\r'\'')" != "1" ]]; do sleep 5; echo "Waiting for emulator..."; done'
-
-      - name: Verify Emulator
-        run: |
-          $ANDROID_HOME/platform-tools/adb devices
-          $ANDROID_HOME/platform-tools/adb shell getprop
+          emulator -avd test -no-audio -no-window -no-snapshot -gpu swiftshader_indirect -no-accel &
+          adb wait-for-device
+          adb shell settings put global window_animation_scale 0
+          adb shell settings put global transition_animation_scale 0
+          adb shell settings put global animator_duration_scale 0
+          timeout 300 bash -c 'while [[ "$(adb shell getprop sys.boot_completed | tr -d '\''\r'\'')" != "1" ]]; do sleep 5; echo "Waiting for emulator..."; done'
 
       - name: Start Appium
         run: |
