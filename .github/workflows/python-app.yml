@@ -1,4 +1,4 @@
-name: Mobile Automation Pipeline (Docker Solution)
+name: Mobile Automation Pipeline (Fixed Docker Solution)
 
 on:
   push:
@@ -34,32 +34,32 @@ jobs:
 
       - name: Run Android Emulator in Docker
         run: |
+          # Usando a imagem oficial do Android Emulator
           docker run -d \
             --name android-emulator \
             --privileged \
             -p 5554:5554 \
             -p 5555:5555 \
-            -e DEVICE="Pixel 4" \
-            -e ANDROID_ARCH="x86_64" \
-            -e API_LEVEL=30 \
-            -e EMULATOR_OPTIONS="-no-window -gpu swiftshader_indirect -no-snapshot -noaudio -no-boot-anim" \
+            -e ANDROID_DEVICE="Nexus 5" \
+            -e ANDROID_VERSION=30 \
+            -e EMULATOR_ARGS="-no-window -gpu swiftshader_indirect -no-snapshot -noaudio -no-boot-anim" \
             -v $(pwd):/root/tests \
             -w /root/tests \
-            budtmo/docker-android-x86-11.0
+            ghcr.io/butomo1989/docker-android-emulator:latest
 
           # Wait for emulator to be ready
-          docker exec android-emulator bash -c '
           for i in {1..60}; do
-            if adb shell getprop sys.boot_completed | grep -q "1"; then
+            if docker exec android-emulator adb shell getprop sys.boot_completed | grep -q "1"; then
               echo "Emulator ready!"
-              exit 0
+              break
             fi
             echo "Waiting for emulator... Attempt $i/60"
             sleep 5
           done
-          echo "Emulator failed to start"
-          exit 1
-          '
+
+          # Verificação final
+          docker exec android-emulator adb devices
+          docker exec android-emulator adb shell getprop
 
       - name: Run Tests
         run: |
