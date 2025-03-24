@@ -1,4 +1,4 @@
-name: Mobile Tests Pipeline (Fixed)
+name: Mobile Automation Pipeline (Robust Version)
 
 on:
   push:
@@ -9,17 +9,20 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 45  # Aumentado para emuladores lentos
 
     steps:
+      # 1. Checkout do código
       - name: Checkout code
         uses: actions/checkout@v4
 
+      # 2. Configuração do Python
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
           python-version: '3.9'
 
+      # 3. Instalação de dependências
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
@@ -27,12 +30,20 @@ jobs:
           npm install -g appium@2.0.0
           npm install -g appium-doctor
 
+      # 4. Verificação do ambiente Appium
+      - name: Verify Appium environment
+        run: |
+          appium-doctor --android
+          appium --version
+
+      # 5. Configuração do Java (necessário para Android SDK)
       - name: Setup Java
         uses: actions/setup-java@v3
         with:
           distribution: 'zulu'
           java-version: '11'
 
+      # 6. Instalação do Android SDK
       - name: Install Android SDK
         run: |
           mkdir -p $ANDROID_HOME
@@ -43,44 +54,90 @@ jobs:
           echo "ANDROID_HOME=$ANDROID_HOME" >> $GITHUB_ENV
           echo "$ANDROID_HOME/cmdline-tools/tools/bin:$ANDROID_HOME/platform-tools" >> $GITHUB_PATH
 
-      - name: Verify Android tools
-        run: |
-          sdkmanager --version
-          adb version
-
-      - name: Accept licenses
+      # 7. Aceitação de licenças
+      - name: Accept Android licenses
         run: |
           yes | sdkmanager --licenses
 
+      # 8. Instalação de pacotes Android
       - name: Install Android packages
         run: |
           sdkmanager "platform-tools" "emulator" "platforms;android-30" "system-images;android-30;google_apis;x86"
 
-      - name: Create AVD
+      # 9. Criação do AVD (Android Virtual Device)
+      - name: Create Android Virtual Device
         run: |
           echo "no" | avdmanager create avd -n test -k "system-images;android-30;google_apis;x86" -f
 
-      - name: Start Emulator
+      # 10. Inicialização robusta do emulador
+      - name: Start Android Emulator (Robust)
         run: |
-          emulator -avd test -no-audio -no-window -no-snapshot -gpu swiftshader_indirect -no-accel &
+          # Limpeza de processos anteriores
+          adb kill-server || true
+          pkill -9 qemu-system-x86_64 || true
+          rm -rf ~/.android/avd/test.avd/*.lock || true
+          
+          # Inicialização do emulador com parâmetros otimizados
+          emulator -avd test -no-audio -no-window -no-snapshot -gpu swiftshader_indirect -no-accel -memory 2048 -wipe-data &
+          
+          # Espera com verificações robustas
+          echo "Waiting for device to be ready..."
+          for i in {1..60}; do
+            adb devices | grep device$ && break
+            sleep 5
+            echo "Attempt $i/60 - Device not ready yet..."
+          done
+          
+          # Configurações pós-inicialização
           adb wait-for-device
           adb shell settings put global window_animation_scale 0
           adb shell settings put global transition_animation_scale 0
           adb shell settings put global animator_duration_scale 0
-          timeout 300 bash -c 'while [[ "$(adb shell getprop sys.boot_completed | tr -d '\''\r'\'')" != "1" ]]; do sleep 5; echo "Waiting for emulator..."; done'
+          
+          # Verificação final do boot
+          timeout 300 bash -c '
+          while [[ "$(adb shell getprop sys.boot_completed | tr -d '\''\r'\'')" != "1" ]]; do
+            sleep 5
+            echo "Checking boot completion..."
+          done
+          echo "Emulator fully booted!"
+          '
 
-      - name: Start Appium
+      # 11. Verificação do ambiente
+      - name: Verify environment
+        run: |
+          echo "::group::ADB Devices"
+          adb devices -l
+          echo "::endgroup::"
+          
+          echo "::group::Emulator Properties"
+          adb shell getprop
+          echo "::endgroup::"
+
+      # 12. Inicialização do Appium
+      - name: Start Appium Server
         run: |
           appium --relaxed-security --log-timestamp --local-timezone --allow-insecure chromedriver_autodownload &
           sleep 15
-          curl http://localhost:4723/wd/hub/status
+          echo "Appium server status:"
+          curl http://localhost:4723/wd/hub/status || true
 
-      - name: Run Tests
+      # 13. Execução dos testes
+      - name: Run Automation Tests
         run: |
           robot --outputdir results --log log.html --report report.html features/
 
-      - name: Upload results
+      # 14. Upload dos resultados
+      - name: Upload Test Results
         uses: actions/upload-artifact@v4
         with:
           name: test-results
           path: results/
+          
+      # 15. Limpeza (opcional)
+      - name: Clean up
+        if: always()
+        run: |
+          adb kill-server || true
+          pkill -9 node || true
+          pkill -9 qemu-system-x86_64 || true
