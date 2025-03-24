@@ -1,4 +1,4 @@
-name: Mobile Tests Pipeline (Simplified)
+name: Mobile Tests Pipeline (Final)
 
 on:
   push:
@@ -9,13 +9,13 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
-    timeout-minutes: 30  # Aumenta o timeout global
+    timeout-minutes: 30
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
-      - name: Set up Python 3.9
+      - name: Set up Python
         uses: actions/setup-python@v4
         with:
           python-version: '3.9'
@@ -24,9 +24,14 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
-          npm install -g appium
+          npm install -g appium@2.0.0
+          npm install -g appium-doctor
 
-      - name: Setup Java (requerido pelo Android SDK)
+      - name: Verify Appium installation
+        run: |
+          appium-doctor --android
+
+      - name: Setup Java
         uses: actions/setup-java@v3
         with:
           distribution: 'zulu'
@@ -48,7 +53,7 @@ jobs:
         run: |
           echo "no" | $ANDROID_HOME/cmdline-tools/tools/bin/avdmanager create avd -n test -k "system-images;android-30;google_apis;x86" -f
 
-      - name: Start Emulator (headless)
+      - name: Start Emulator
         run: |
           $ANDROID_HOME/emulator/emulator -avd test -no-audio -no-window -no-snapshot -gpu swiftshader_indirect -no-accel &
           $ANDROID_HOME/platform-tools/adb wait-for-device
@@ -64,7 +69,7 @@ jobs:
 
       - name: Start Appium
         run: |
-          appium --relaxed-security --log-timestamp --local-timezone &
+          appium --relaxed-security --log-timestamp --local-timezone --allow-insecure chromedriver_autodownload &
           sleep 15
           curl http://localhost:4723/wd/hub/status
 
@@ -73,7 +78,7 @@ jobs:
           robot --outputdir results --log log.html --report report.html features/
 
       - name: Upload results
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: test-results
           path: results/
