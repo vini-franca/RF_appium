@@ -1,4 +1,4 @@
-name: Mobile Tests Pipeline (Appium Android Action)
+name: Mobile Tests Pipeline (Official Appium Docker)
 
 on:
   push:
@@ -16,25 +16,22 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v3
 
-      - name: Setup Appium Android
-        uses: marketplace-actions/appium-android-action@v1
-        with:
-          device: "Samsung Galaxy S10"
-          api-level: 30
-
-      - name: Install Python dependencies
+      - name: Run tests with official Appium image
         run: |
-          python -m pip install --upgrade pip
-          pip install -r requirements.txt
-
-      - name: Run Appium server
-        run: |
-          appium --allow-insecure chromedriver_autodownload &
-          sleep 20
-
-      - name: Execute tests
-        run: |
+          docker run --rm \
+          -v $PWD:/root/tests \
+          -w /root/tests \
+          -e APPIUM_HOST=127.0.0.1 \
+          -e APPIUM_PORT=4723 \
+          --privileged \
+          appium/appium \
+          bash -c "
+          pip install -r requirements.txt && \
+          appium --allow-insecure chromedriver_autodownload & \
+          sleep 20 && \
+          adb start-server && \
           robot --outputdir results --log log.html --report report.html features/
+          "
 
       - name: Upload test results
         uses: actions/upload-artifact@v4
