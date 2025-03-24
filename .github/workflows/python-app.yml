@@ -20,15 +20,16 @@ jobs:
       # Passo 2: Configurar Docker e executar os testes
       - name: Run tests in Docker
         run: |
-          docker run --rm \
+          docker run --rm --privileged \
           -v $PWD:/root/tests \
           -w /root/tests \
-          butomo1989/docker-android-x86-11.0 \
+          -e DEVICE="Samsung Galaxy S10" \
+          -e APPIUM=true \
+          ghcr.io/marketplace-actions/appium-android-action/ubuntu:v1.0.0 \
           bash -c "
-          apt-get update && \
           pip install -r requirements.txt && \
           appium --allow-insecure chromedriver_autodownload & \
-          sleep 10 && \
+          sleep 20 && \
           robot --outputdir results --log log.html --report report.html features/
           "
       
